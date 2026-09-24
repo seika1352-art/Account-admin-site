@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>【管理者専用】林口 言語交流アプリ - JSON CRUD 管理画面</title>
+  <title>【単独動作版】林口 言語交流アプリ - JSON CRUD 管理画面</title>
   <!-- Tailwind CSS & FontAwesome -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -25,14 +25,14 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-xl font-extrabold tracking-wide">林口 言語交流会 アカウント管理コンソール</h1>
-            <span class="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Admin Only</span>
+            <span class="bg-amber-500 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">スタンドアロン表示</span>
           </div>
-          <p class="text-xs text-slate-400 font-bold mt-0.5">参加者用画面 (index.html) と localStorage 経由で常時連携中</p>
+          <p class="text-xs text-slate-400 font-bold mt-0.5">※ 現在ログイン画面との連携を解除し、管理画面単体で独立動作しています</p>
         </div>
       </div>
       <div class="flex items-center gap-2 w-full sm:w-auto">
-        <button onclick="refreshData()" class="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-xs font-bold text-sky-400 transition-colors">
-          <i class="fa-solid fa-arrows-rotate mr-1"></i> 最新データ再取得
+        <button onclick="resetToSampleData()" class="flex-1 sm:flex-none px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-xs font-bold text-amber-400 transition-colors">
+          <i class="fa-solid fa-rotate-left mr-1"></i> サンプルデータに戻す
         </button>
         <button onclick="openCreateModal()" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl text-xs shadow-md transition-colors">
           <i class="fa-solid fa-plus mr-1"></i> アカウント直接追加
@@ -49,9 +49,9 @@
           <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
             <div>
               <h2 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                <i class="fa-solid fa-users text-sky-500"></i> 登録アカウント一覧 (Read)
+                <i class="fa-solid fa-users text-sky-500"></i> 管理データ一覧 (Read)
               </h2>
-              <p class="text-xs text-slate-400 font-bold">現在登録されている全メンバーのリスト</p>
+              <p class="text-xs text-slate-400 font-bold">管理画面専用のモックアカウントデータ</p>
             </div>
             <span id="userCountBadge" class="bg-sky-50 text-sky-600 border border-sky-200 font-black text-xs px-3 py-1 rounded-full">
               0 件
@@ -175,11 +175,22 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'linkou_language_app_users';
+    // 連携切り離し用：管理画面専用の独立キーに変更
+    const STORAGE_KEY = 'linkou_admin_standalone_users';
+
+    // 独立表示用の初期サンプルデータ
+    const SAMPLE_DATA = [
+      { id: "demo_001", name: "管理者テスト", password: "admin", points: 9999, createdAt: "2026-03-01T10:00:00Z" },
+      { id: "demo_002", name: "佐藤 花子 (JP)", password: "1", points: 1500, createdAt: "2026-03-02T12:30:00Z" },
+      { id: "demo_003", name: "陳 偉倫 (TW)", password: "1", points: 2300, createdAt: "2026-03-03T15:20:00Z" }
+    ];
 
     function getUsers() {
       const data = localStorage.getItem(STORAGE_KEY);
-      if (!data) return [];
+      if (!data) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(SAMPLE_DATA));
+        return SAMPLE_DATA;
+      }
       try {
         return JSON.parse(data);
       } catch (e) {
@@ -200,7 +211,7 @@
       const tbody = document.getElementById('userTableBody');
       tbody.innerHTML = '';
       if (users.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 font-bold">登録済みアカウントがありません</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 font-bold">登録データがありません</td></tr>`;
       } else {
         users.forEach(u => {
           const tr = document.createElement('tr');
@@ -227,9 +238,10 @@
       document.getElementById('jsonEditor').value = JSON.stringify(users, null, 2);
     }
 
-    function refreshData() {
-      render();
-      alert('最新データを再取得しました！');
+    // サンプルデータへリセット
+    function resetToSampleData() {
+      if (!confirm('サンプル初期データに戻しますか？')) return;
+      saveUsers(SAMPLE_DATA);
     }
 
     // 削除 (Delete)
@@ -338,17 +350,10 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `linkou_users_${new Date().toISOString().slice(0,10)}.json`;
+      a.download = `linkou_admin_data_${new Date().toISOString().slice(0,10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
     }
-
-    // 他タブでの変更をリアルタイム検知
-    window.addEventListener('storage', (e) => {
-      if (e.key === STORAGE_KEY) {
-        render();
-      }
-    });
 
     // 初期描画
     render();
